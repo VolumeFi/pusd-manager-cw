@@ -21,7 +21,13 @@ pub struct BurnInfo {
     pub timestamp: Timestamp,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct ChainSetting {
+    pub job_id: String,
+    pub minimum_amount: u128,
+}
+
 pub const TX_TIMESTAMP: Map<(u64, String), Timestamp> = Map::new("tx_timestamp");
-pub const JOB_IDS: Map<String, String> = Map::new("job_ids");
+pub const CHAIN_SETTINGS: Map<String, ChainSetting> = Map::new("chain_settings");
 pub const STATE: Item<State> = Item::new("state");
 pub const WITHDRAW_LIST: Map<u64, BurnInfo> = Map::new("burn_list");

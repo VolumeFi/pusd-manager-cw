@@ -17,7 +17,6 @@ The PUSD Manager CW smart contract provides functionalities to manage PUSD token
 - Rust
 - Cargo
 - CosmWasm
-- wasm-pack
 
 ## Installation
 
@@ -45,10 +44,6 @@ cargo wasm
 ```sh
 cargo test
 ```
-
-### Deploy the contract
-
-Follow the instructions in the [CosmWasm documentation](https://docs.cosmwasm.com/docs/1.0/getting-started/compile-contract) to deploy the contract to a blockchain.
 
 ## License
 

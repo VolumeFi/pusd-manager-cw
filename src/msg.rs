@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, CustomMsg};
 
 #[allow(unused_imports)]
-use crate::state::{BurnInfo, State};
+use crate::state::{BurnInfo, State, ChainSetting};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -13,9 +13,9 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     // Register Jobs in hash map with chain_id as key and job_id as value
-    RegisterJob {
+    RegisterChain {
         chain_id: String,
-        job_id: String,
+        chain_setting: ChainSetting,
     },
     // Mint PUSD to recipient
     MintPusd {
@@ -52,6 +52,11 @@ pub enum ExecuteMsg {
     UpdateCompass {
         chain_id: String,
         new_compass: String,
+    },
+    // Update Refund Wallet
+    UpdateRefundWallet {
+        chain_id: String,
+        new_refund_wallet: String,
     },
 }
 
@@ -116,8 +121,8 @@ pub enum QueryMsg {
     #[returns(State)]
     GetState {},
 
-    #[returns(Vec<JobIdInfo>)]
-    GetJobIds {},
+    #[returns(Vec<ChainSettingInfo>)]
+    GetChainSettings {},
 
     #[returns(String)]
     GetJobId { chain_id: String },
@@ -133,9 +138,10 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct JobIdInfo {
+pub struct ChainSettingInfo {
     pub chain_id: String,
     pub job_id: String,
+    pub minimum_amount: u128,
 }
 
 impl CustomMsg for PalomaMsg {}
