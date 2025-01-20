@@ -10,7 +10,8 @@ use ethabi::{Address, Contract, Function, Param, ParamType, StateMutability, Tok
 
 use crate::error::ContractError;
 use crate::msg::{
-    ChainSettingInfo, CreateDenomMsg, DenomUnit, ExecuteJob, ExecuteMsg, InstantiateMsg, Metadata, MintMsg, PalomaMsg, QueryMsg
+    ChainSettingInfo, CreateDenomMsg, DenomUnit, ExecuteJob, ExecuteMsg, InstantiateMsg, Metadata,
+    MintMsg, PalomaMsg, QueryMsg,
 };
 use crate::state::{BurnInfo, State, CHAIN_SETTINGS, STATE, WITHDRAW_LIST};
 use std::str::FromStr;
@@ -61,7 +62,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
     match msg {
-        ExecuteMsg::RegisterChain { chain_id, chain_setting } => {
+        ExecuteMsg::RegisterChain {
+            chain_id,
+            chain_setting,
+        } => {
             // ACTION: Implement RegisterJob
             assert!(
                 info.sender == STATE.load(deps.storage)?.owner,
@@ -113,7 +117,10 @@ pub fn execute(
                 }
             });
             let chain_setting = CHAIN_SETTINGS.load(deps.storage, chain_id.clone())?;
-            assert!(amount > Uint128::from(chain_setting.minimum_amount), "Amount must be greater than minimum amount");
+            assert!(
+                amount > Uint128::from(chain_setting.minimum_amount),
+                "Amount must be greater than minimum amount"
+            );
             let burn_info = BurnInfo {
                 chain_id: chain_id.clone(),
                 burner: info.sender.clone(),
@@ -288,7 +295,9 @@ pub fn execute(
             Ok(Response::new()
                 .add_message(CosmosMsg::Custom(PalomaMsg::SchedulerMsg {
                     execute_job: ExecuteJob {
-                        job_id: CHAIN_SETTINGS.load(deps.storage, burn_info.chain_id.clone())?.job_id,
+                        job_id: CHAIN_SETTINGS
+                            .load(deps.storage, burn_info.chain_id.clone())?
+                            .job_id,
                         payload: Binary::new(
                             contract
                                 .function("withdraw")
@@ -453,48 +462,51 @@ pub fn execute(
                     ("chain_id", &chain_id),
                     ("new_compass", new_compass.as_str()),
                 ]))
-        },
-        ExecuteMsg::UpdateRefundWallet { chain_id, new_refund_wallet } => {
+        }
+        ExecuteMsg::UpdateRefundWallet {
+            chain_id,
+            new_refund_wallet,
+        } => {
             let state = STATE.load(deps.storage)?;
-        assert!(state.owner != info.sender, "Unauthorized");
-        let update_refund_wallet_address: Address =
-            Address::from_str(new_refund_wallet.as_str()).unwrap();
-        #[allow(deprecated)]
-        let contract: Contract = Contract {
-            constructor: None,
-            functions: BTreeMap::from_iter(vec![(
-                "update_refund_wallet".to_string(),
-                vec![Function {
-                    name: "update_refund_wallet".to_string(),
-                    inputs: vec![Param {
-                        name: "new_refund_wallet".to_string(),
-                        kind: ParamType::Address,
-                        internal_type: None,
+            assert!(state.owner != info.sender, "Unauthorized");
+            let update_refund_wallet_address: Address =
+                Address::from_str(new_refund_wallet.as_str()).unwrap();
+            #[allow(deprecated)]
+            let contract: Contract = Contract {
+                constructor: None,
+                functions: BTreeMap::from_iter(vec![(
+                    "update_refund_wallet".to_string(),
+                    vec![Function {
+                        name: "update_refund_wallet".to_string(),
+                        inputs: vec![Param {
+                            name: "new_refund_wallet".to_string(),
+                            kind: ParamType::Address,
+                            internal_type: None,
+                        }],
+                        outputs: Vec::new(),
+                        constant: None,
+                        state_mutability: StateMutability::NonPayable,
                     }],
-                    outputs: Vec::new(),
-                    constant: None,
-                    state_mutability: StateMutability::NonPayable,
-                }],
-            )]),
-            events: BTreeMap::new(),
-            errors: BTreeMap::new(),
-            receive: false,
-            fallback: false,
-        };
-        Ok(Response::new()
-            .add_message(CosmosMsg::Custom(PalomaMsg::SchedulerMsg {
-                execute_job: ExecuteJob {
-                    job_id: CHAIN_SETTINGS.load(deps.storage, chain_id.clone())?.job_id,
-                    payload: Binary::new(
-                        contract
-                            .function("update_refund_wallet")
-                            .unwrap()
-                            .encode_input(&[Token::Address(update_refund_wallet_address)])
-                            .unwrap(),
-                    ),
-                },
-            }))
-            .add_attribute("action", "update_refund_wallet"))
+                )]),
+                events: BTreeMap::new(),
+                errors: BTreeMap::new(),
+                receive: false,
+                fallback: false,
+            };
+            Ok(Response::new()
+                .add_message(CosmosMsg::Custom(PalomaMsg::SchedulerMsg {
+                    execute_job: ExecuteJob {
+                        job_id: CHAIN_SETTINGS.load(deps.storage, chain_id.clone())?.job_id,
+                        payload: Binary::new(
+                            contract
+                                .function("update_refund_wallet")
+                                .unwrap()
+                                .encode_input(&[Token::Address(update_refund_wallet_address)])
+                                .unwrap(),
+                        ),
+                    },
+                }))
+                .add_attribute("action", "update_refund_wallet"))
         }
     }
 }
@@ -529,7 +541,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 });
             to_json_binary(&chain_setting_info)
         }
-        QueryMsg::GetJobId { chain_id } => to_json_binary(&CHAIN_SETTINGS.load(deps.storage, chain_id)?),
+        QueryMsg::GetJobId { chain_id } => {
+            to_json_binary(&CHAIN_SETTINGS.load(deps.storage, chain_id)?)
+        }
         QueryMsg::ReWithdrawable {} => to_json_binary(&!WITHDRAW_LIST.is_empty(deps.storage)),
     }
 }

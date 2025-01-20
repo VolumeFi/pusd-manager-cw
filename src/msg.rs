@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, CustomMsg};
 
 #[allow(unused_imports)]
-use crate::state::{BurnInfo, State, ChainSetting};
+use crate::state::{BurnInfo, ChainSetting, State};
 
 #[cw_serde]
 pub struct InstantiateMsg {
