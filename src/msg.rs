@@ -7,7 +7,6 @@ use crate::state::{BurnInfo, ChainSetting, State};
 #[cw_serde]
 pub struct InstantiateMsg {
     pub retry_delay: u64,
-    pub denom: String,
 }
 
 #[cw_serde]

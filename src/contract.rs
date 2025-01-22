@@ -23,8 +23,9 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
-    let subdenom = env.contract.address.to_string();
-    let denom = "factory/".to_string() + subdenom.as_str() + "/upusd";
+    let subdenom = "upusd";
+    let creator = env.contract.address.to_string();
+    let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
 
     let state = State {
         retry_delay: msg.retry_delay,
@@ -47,7 +48,10 @@ pub fn instantiate(
     };
     Ok(Response::new()
         .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-            create_denom: Some(CreateDenomMsg { subdenom, metadata }),
+            create_denom: Some(CreateDenomMsg {
+                subdenom: subdenom.to_string(),
+                metadata,
+            }),
             mint_tokens: None,
         }))
         .add_attribute("method", "instantiate")
