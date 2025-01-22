@@ -38,7 +38,7 @@ pub fn instantiate(
         description: "Paloma USD stablecoin".to_string(),
         denom_units: vec![DenomUnit {
             denom: denom.clone(),
-            exponent: 0,
+            exponent: 6,
             aliases: vec![],
         }],
         name: "Paloma USD".to_string(),

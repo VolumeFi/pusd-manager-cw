@@ -1,1 +1,1 @@
-e389996925f8c32b84ef77a751b370c3e53918438eae041c758e3195eebf0faf  pusd_manager_cw.wasm
+20710f375d897411069bd7ddd87cdb54bc50b1c0e439cbb5af4b24f785e85d61  pusd_manager_cw.wasm
