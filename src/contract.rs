@@ -66,14 +66,16 @@ pub fn execute(
                 base: denom.clone(),
                 display: denom.clone(),
             };
+            let message = CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
+                create_denom: Some(CreateDenomMsg {
+                    subdenom: subdenom.to_string(),
+                    metadata,
+                }),
+                mint_tokens: None,
+            });
+            print!("{}", to_json_binary(&message).unwrap());
             Ok(Response::new()
-                .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-                    create_denom: Some(CreateDenomMsg {
-                        subdenom: subdenom.to_string(),
-                        metadata,
-                    }),
-                    mint_tokens: None,
-                }))
+                .add_message(message)
                 .add_attribute("action", "create_pusd")
                 .add_attribute("denom", denom))
         }
@@ -564,4 +566,22 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use cosmwasm_std::{testing::{message_info, mock_dependencies, mock_env}, Addr};
+
+    use super::*;
+    
+    #[test]
+    fn create_pusd() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg { retry_delay: 60 };
+        let info = message_info(&Addr::unchecked("creator"), &[]);
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        // beneficiary can release it
+        let info = message_info(&Addr::unchecked("creator"), &[]);
+        let msg = ExecuteMsg::CreatePusd {};
+        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    }
+}
