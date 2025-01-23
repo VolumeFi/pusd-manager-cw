@@ -19,41 +19,18 @@ use std::str::FromStr;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response<PalomaMsg>, ContractError> {
-    let subdenom = "upusd";
-    let creator = env.contract.address.to_string();
-    let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
-
+) -> Result<Response, ContractError> {
     let state = State {
         retry_delay: msg.retry_delay,
         owner: info.sender.clone(),
-        denom: denom.clone(),
+        denom: "".to_string(),
         last_nonce: 0,
     };
     STATE.save(deps.storage, &state)?;
-    let metadata: Metadata = Metadata {
-        description: "Paloma USD stablecoin".to_string(),
-        denom_units: vec![DenomUnit {
-            denom: denom.clone(),
-            exponent: 6,
-            aliases: vec![],
-        }],
-        name: "Paloma USD".to_string(),
-        symbol: "PUSD".to_string(),
-        base: denom.clone(),
-        display: denom.clone(),
-    };
     Ok(Response::new()
-        .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-            create_denom: Some(CreateDenomMsg {
-                subdenom: subdenom.to_string(),
-                metadata,
-            }),
-            mint_tokens: None,
-        }))
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
@@ -66,6 +43,40 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
     match msg {
+        ExecuteMsg::CreatePusd {} => {
+            let subdenom = "upusd";
+            let creator = env.contract.address.to_string();
+            let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
+            let mut state = STATE.load(deps.storage)?;
+            assert!(state.owner == info.sender, "Unauthorized");
+            assert!(state.denom == *"", "Denom already created");
+
+            state.denom = denom.clone();
+
+            STATE.save(deps.storage, &state)?;
+            let metadata: Metadata = Metadata {
+                description: "Paloma USD stablecoin".to_string(),
+                denom_units: vec![DenomUnit {
+                    denom: denom.clone(),
+                    exponent: 6,
+                    aliases: vec![],
+                }],
+                name: "Paloma USD".to_string(),
+                symbol: "PUSD".to_string(),
+                base: denom.clone(),
+                display: denom.clone(),
+            };
+            Ok(Response::new()
+                .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
+                    create_denom: Some(CreateDenomMsg {
+                        subdenom: subdenom.to_string(),
+                        metadata,
+                    }),
+                    mint_tokens: None,
+                }))
+                .add_attribute("action", "create_pusd")
+                .add_attribute("denom", denom))
+        }
         ExecuteMsg::RegisterChain {
             chain_id,
             chain_setting,

@@ -11,6 +11,8 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    // Create a new denom
+    CreatePusd {},
     // Register Jobs in hash map with chain_id as key and job_id as value
     RegisterChain {
         chain_id: String,
