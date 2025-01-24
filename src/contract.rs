@@ -19,20 +19,51 @@ use std::str::FromStr;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<Response<PalomaMsg>, ContractError> {
+    let subdenom = "upusd";
+    let creator = env.contract.address.to_string();
+    let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
     let state = State {
         retry_delay: msg.retry_delay,
         owner: info.sender.clone(),
-        denom: "".to_string(),
+        denom: denom.clone(),
         last_nonce: 0,
     };
     STATE.save(deps.storage, &state)?;
+    let metadata: Metadata = Metadata {
+        description: "Paloma USD stablecoin".to_string(),
+        denom_units: vec![
+            DenomUnit {
+                denom: denom.clone(),
+                exponent: 0,
+                aliases: vec![],
+            },
+            DenomUnit {
+                denom: "pusd".to_string(),
+                exponent: 6,
+                aliases: vec![],
+            },
+        ],
+        name: "Paloma USD".to_string(),
+        symbol: "PUSD".to_string(),
+        base: denom.clone(),
+        display: "pusd".to_string(),
+    };
     Ok(Response::new()
+        .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
+            create_denom: Some(CreateDenomMsg {
+                subdenom: subdenom.to_string(),
+                metadata,
+            }),
+            mint_tokens: None,
+        }))
         .add_attribute("method", "instantiate")
-        .add_attribute("owner", info.sender))
+        .add_attribute("owner", info.sender)
+        .add_attribute("action", "create_pusd")
+        .add_attribute("denom", denom))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -43,51 +74,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
     match msg {
-        ExecuteMsg::CreatePusd {} => {
-            let subdenom = "upusd";
-            let second_subdenom = "pusd";
-            let creator = env.contract.address.to_string();
-            let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
-            let second_denom = "factory/".to_string() + creator.as_str() + "/" + second_subdenom;
-            let mut state = STATE.load(deps.storage)?;
-            assert!(state.owner == info.sender, "Unauthorized");
-            // assert!(state.denom == *"", "Denom already created");
-
-            state.denom = denom.clone();
-
-            STATE.save(deps.storage, &state)?;
-            let metadata: Metadata = Metadata {
-                description: "Paloma USD stablecoin".to_string(),
-                denom_units: vec![
-                    DenomUnit {
-                        denom: denom.clone(),
-                        exponent: 0,
-                        aliases: vec![],
-                    },
-                    DenomUnit {
-                        denom: second_denom.clone(),
-                        exponent: 6,
-                        aliases: vec![],
-                    },
-                ],
-                name: "Paloma USD".to_string(),
-                symbol: "PUSD".to_string(),
-                base: denom.clone(),
-                display: second_denom,
-            };
-            let message = CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-                create_denom: Some(CreateDenomMsg {
-                    subdenom: subdenom.to_string(),
-                    metadata,
-                }),
-                mint_tokens: None,
-            });
-            // print!("{}", to_json_binary(&message).unwrap());
-            Ok(Response::new()
-                .add_message(message)
-                .add_attribute("action", "create_pusd")
-                .add_attribute("denom", denom))
-        }
         ExecuteMsg::RegisterChain {
             chain_id,
             chain_setting,
@@ -590,10 +576,5 @@ mod tests {
         let msg = InstantiateMsg { retry_delay: 60 };
         let info = message_info(&Addr::unchecked("creator"), &[]);
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let info = message_info(&Addr::unchecked("creator"), &[]);
-        let msg = ExecuteMsg::CreatePusd {};
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
 }
