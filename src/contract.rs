@@ -49,18 +49,25 @@ pub fn execute(
             let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
             let mut state = STATE.load(deps.storage)?;
             assert!(state.owner == info.sender, "Unauthorized");
-            assert!(state.denom == *"", "Denom already created");
+            // assert!(state.denom == *"", "Denom already created");
 
             state.denom = denom.clone();
 
             STATE.save(deps.storage, &state)?;
             let metadata: Metadata = Metadata {
                 description: "Paloma USD stablecoin".to_string(),
-                denom_units: vec![DenomUnit {
-                    denom: denom.clone(),
-                    exponent: 6,
-                    aliases: vec![],
-                }],
+                denom_units: vec![
+                    DenomUnit {
+                        denom: denom.clone(),
+                        exponent: 0,
+                        aliases: vec![],
+                    },
+                    DenomUnit {
+                        denom: "pusd".to_string(),
+                        exponent: 6,
+                        aliases: vec![],
+                    },
+                ],
                 name: "Paloma USD".to_string(),
                 symbol: "PUSD".to_string(),
                 base: denom.clone(),
@@ -73,7 +80,7 @@ pub fn execute(
                 }),
                 mint_tokens: None,
             });
-            print!("{}", to_json_binary(&message).unwrap());
+            // print!("{}", to_json_binary(&message).unwrap());
             Ok(Response::new()
                 .add_message(message)
                 .add_attribute("action", "create_pusd")
@@ -567,10 +574,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::{message_info, mock_dependencies, mock_env}, Addr};
+    use cosmwasm_std::{
+        testing::{message_info, mock_dependencies, mock_env},
+        Addr,
+    };
 
     use super::*;
-    
+
     #[test]
     fn create_pusd() {
         let mut deps = mock_dependencies();
