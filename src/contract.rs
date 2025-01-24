@@ -45,8 +45,10 @@ pub fn execute(
     match msg {
         ExecuteMsg::CreatePusd {} => {
             let subdenom = "upusd";
+            let second_subdenom = "pusd";
             let creator = env.contract.address.to_string();
             let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
+            let second_denom = "factory/".to_string() + creator.as_str() + "/" + second_subdenom;
             let mut state = STATE.load(deps.storage)?;
             assert!(state.owner == info.sender, "Unauthorized");
             // assert!(state.denom == *"", "Denom already created");
@@ -63,7 +65,7 @@ pub fn execute(
                         aliases: vec![],
                     },
                     DenomUnit {
-                        denom: "pusd".to_string(),
+                        denom: second_denom.clone(),
                         exponent: 6,
                         aliases: vec![],
                     },
@@ -71,7 +73,7 @@ pub fn execute(
                 name: "Paloma USD".to_string(),
                 symbol: "PUSD".to_string(),
                 base: denom.clone(),
-                display: denom.clone(),
+                display: second_denom,
             };
             let message = CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
                 create_denom: Some(CreateDenomMsg {
