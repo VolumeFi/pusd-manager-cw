@@ -84,8 +84,8 @@ pub fn execute(
                 info.sender == STATE.load(deps.storage)?.owner,
                 "Unauthorized"
             );
-            assert!(chain_id.is_empty(), "Chain ID cannot be empty");
-            assert!(chain_setting.job_id.is_empty(), "Job ID cannot be empty");
+            assert!(!chain_id.is_empty(), "Chain ID cannot be empty");
+            assert!(!chain_setting.job_id.is_empty(), "Job ID cannot be empty");
             CHAIN_SETTINGS.save(deps.storage, chain_id.clone(), &chain_setting)?;
             Ok(Response::new().add_attributes(vec![
                 ("action", "register_job"),
@@ -481,7 +481,7 @@ pub fn execute(
             new_refund_wallet,
         } => {
             let state = STATE.load(deps.storage)?;
-            assert!(state.owner != info.sender, "Unauthorized");
+            assert!(state.owner == info.sender, "Unauthorized");
             let update_refund_wallet_address: Address =
                 Address::from_str(new_refund_wallet.as_str()).unwrap();
             #[allow(deprecated)]
