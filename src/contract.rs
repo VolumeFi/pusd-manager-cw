@@ -23,7 +23,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
-    assert!(info.funds.is_empty(), "Insufficient funds");
+    assert!(!info.funds.is_empty(), "Insufficient funds");
     let subdenom = "upusd";
     let creator = env.contract.address.to_string();
     let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
