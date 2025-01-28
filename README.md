@@ -8,28 +8,41 @@ The PUSD Manager CW smart contract provides functionalities to manage PUSD token
 
 ## Features
 
-- Mint PUSD tokens
-- Receive PUSD and keep until USDT release confirmed
-- Burn PUSD tokens
+- Register Chain
+  Register chain settings in hash map with chain_id as key
+ 
+- Mint Pusd
+  Mint PUSD denom when user deposits USDT on EVM
+
+- Withdraw
+  Put PUSD and send release USDT message on EVM chain
+
+- ReWithdraw
+  Resend withdraw message in case the previous message failed
+
+- BurnPusd
+  Burn PUSD denom when the release USDT message succeed
+
+- CancelWithdraw
+  Cancel withdraw PUSD in case the previous message failed
+
+- UpdateConfig
+  Update configs including retry_delay and owner
+
+- SetPaloma
+  Set paloma address on EVM Vyper contract
+
+- UpdateCompass
+  Update compass address on EVM Vyper contract
+
+- UpdateRefundWallet
+  Update refund wallet address on EVM Vyper contract
 
 ## Requirements
 
 - Rust
 - Cargo
 - CosmWasm
-
-## Installation
-
-1. Clone the repository:
-    ```sh
-    git clone https://github.com/yourusername/pusd-manager-cw.git
-    cd pusd-manager-cw
-    ```
-
-2. Install dependencies:
-    ```sh
-    cargo build
-    ```
 
 ## Usage
 
