@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary, CustomMsg};
+use cosmwasm_std::{Addr, Binary, CustomMsg, Uint128};
 
 #[allow(unused_imports)]
 use crate::state::{BurnInfo, ChainSetting, State};
@@ -19,7 +19,7 @@ pub enum ExecuteMsg {
     // Mint PUSD to recipient
     MintPusd {
         recipient: Addr,
-        amount: u128,
+        amount: Uint128,
     },
     // Receive PUSD and keep with nonce until withdrawn by owner
     Withdraw {
@@ -102,14 +102,14 @@ pub struct Metadata {
 #[cw_serde]
 pub struct MintMsg {
     pub denom: String,
-    pub amount: u128,
+    pub amount: Uint128,
     pub mint_to_address: String,
 }
 
 #[cw_serde]
 pub struct BurnMsg {
     pub denom: String,
-    pub amount: u128,
+    pub amount: Uint128,
     /// burn_from_address must be set to "" for now.
     pub burn_from_address: String,
 }
@@ -140,7 +140,7 @@ pub enum QueryMsg {
 pub struct ChainSettingInfo {
     pub chain_id: String,
     pub job_id: String,
-    pub minimum_amount: u128,
+    pub minimum_amount: Uint128,
 }
 
 impl CustomMsg for PalomaMsg {}

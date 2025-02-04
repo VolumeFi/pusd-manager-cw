@@ -100,7 +100,8 @@ pub fn execute(
                 info.sender == STATE.load(deps.storage)?.owner,
                 "Unauthorized"
             );
-            assert!(amount > 0, "Amount must be greater than 0");
+
+            assert!(!amount.is_zero(), "Amount must be greater than 0");
 
             Ok(Response::new()
                 .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
@@ -131,7 +132,7 @@ pub fn execute(
             });
             let chain_setting = CHAIN_SETTINGS.load(deps.storage, chain_id.clone())?;
             assert!(
-                amount > Uint128::from(chain_setting.minimum_amount),
+                amount > chain_setting.minimum_amount,
                 "Amount must be greater than minimum amount"
             );
             let burn_info = BurnInfo {
