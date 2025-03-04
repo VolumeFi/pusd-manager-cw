@@ -11,7 +11,7 @@ use ethabi::{Address, Contract, Function, Param, ParamType, StateMutability, Tok
 use crate::error::ContractError;
 use crate::msg::{
     ChainSettingInfo, CreateDenomMsg, DenomUnit, ExecuteJob, ExecuteMsg, InstantiateMsg, Metadata,
-    MintMsg, PalomaMsg, QueryMsg,
+    MintMsg, PalomaMsg, QueryMsg, SetErc20ToDenom,
 };
 use crate::state::{BurnInfo, State, CHAIN_SETTINGS, STATE, WITHDRAW_LIST};
 use std::str::FromStr;
@@ -93,6 +93,22 @@ pub fn execute(
                 ("job_id", &chain_setting.job_id),
                 ("minimum_amount", &chain_setting.minimum_amount.to_string()),
             ]))
+        }
+        ExecuteMsg::SetBrigde { chain_reference_id, erc20_address } => {
+            assert!(
+                info.sender == STATE.load(deps.storage)?.owner,
+                "Unauthorized"
+            );
+            let token_denom = STATE.load(deps.storage)?.denom.clone();
+            Ok(Response::new()
+                .add_message(CosmosMsg::Custom(PalomaMsg::SkywayMsg {
+                    set_erc20_to_denom: SetErc20ToDenom {
+                        erc20_address,
+                        token_denom,
+                        chain_reference_id,
+                    },
+                }))
+                .add_attribute("action", "set_bridge"))
         }
         ExecuteMsg::MintPusd { recipient, amount } => {
             // ACTION: Implement MintPusd
