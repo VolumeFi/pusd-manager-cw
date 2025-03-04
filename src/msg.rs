@@ -16,6 +16,10 @@ pub enum ExecuteMsg {
         chain_id: String,
         chain_setting: ChainSetting,
     },
+    SetBrigde {
+        chain_reference_id: String,
+        erc20_address: String,
+    },
     // Mint PUSD to recipient
     MintPusd {
         recipient: Addr,
@@ -62,11 +66,16 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub enum PalomaMsg {
     /// Message struct for cross-chain calls.
-    SchedulerMsg { execute_job: ExecuteJob },
+    SchedulerMsg {
+        execute_job: ExecuteJob,
+    },
     /// Message struct for tokenfactory calls.
     TokenFactoryMsg {
         create_denom: Option<CreateDenomMsg>,
         mint_tokens: Option<MintMsg>,
+    },
+    SkywayMsg {
+        set_erc20_to_denom: SetErc20ToDenom,
     },
 }
 
@@ -141,6 +150,13 @@ pub struct ChainSettingInfo {
     pub chain_id: String,
     pub job_id: String,
     pub minimum_amount: Uint128,
+}
+
+#[cw_serde]
+pub struct SetErc20ToDenom {
+    pub erc20_address: String,
+    pub token_denom: String,
+    pub chain_reference_id: String,
 }
 
 impl CustomMsg for PalomaMsg {}
