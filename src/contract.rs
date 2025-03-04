@@ -94,7 +94,10 @@ pub fn execute(
                 ("minimum_amount", &chain_setting.minimum_amount.to_string()),
             ]))
         }
-        ExecuteMsg::SetBrigde { chain_reference_id, erc20_address } => {
+        ExecuteMsg::SetBrigde {
+            chain_reference_id,
+            erc20_address,
+        } => {
             assert!(
                 info.sender == STATE.load(deps.storage)?.owner,
                 "Unauthorized"

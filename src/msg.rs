@@ -66,7 +66,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub enum PalomaMsg {
     /// Message struct for cross-chain calls.
-    SchedulerMsg { execute_job: ExecuteJob },
+    SchedulerMsg {
+        execute_job: ExecuteJob,
+    },
     /// Message struct for tokenfactory calls.
     TokenFactoryMsg {
         create_denom: Option<CreateDenomMsg>,
