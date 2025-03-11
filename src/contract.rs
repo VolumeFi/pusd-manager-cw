@@ -541,6 +541,52 @@ pub fn execute(
                 }))
                 .add_attribute("action", "update_refund_wallet"))
         }
+        ExecuteMsg::UpdateRedemptionFee {
+            chain_id,
+            new_redemption_fee,
+        } => {
+            let state = STATE.load(deps.storage)?;
+            assert!(state.owner == info.sender, "Unauthorized");
+
+            let redemption_fee = new_redemption_fee.u128();
+            let redemption_fee_bytes = Uint::from_big_endian(&redemption_fee.to_be_bytes());
+            #[allow(deprecated)]
+            let contract: Contract = Contract {
+                constructor: None,
+                functions: BTreeMap::from_iter(vec![(
+                    "update_redemption_fee".to_string(),
+                    vec![Function {
+                        name: "update_redemption_fee".to_string(),
+                        inputs: vec![Param {
+                            name: "_new_redemption_fee".to_string(),
+                            kind: ParamType::Uint(256),
+                            internal_type: None,
+                        }],
+                        outputs: Vec::new(),
+                        constant: None,
+                        state_mutability: StateMutability::NonPayable,
+                    }],
+                )]),
+                events: BTreeMap::new(),
+                errors: BTreeMap::new(),
+                receive: false,
+                fallback: false,
+            };
+            Ok(Response::new()
+                .add_message(CosmosMsg::Custom(PalomaMsg::SchedulerMsg {
+                    execute_job: ExecuteJob {
+                        job_id: CHAIN_SETTINGS.load(deps.storage, chain_id.clone())?.job_id,
+                        payload: Binary::new(
+                            contract
+                                .function("update_redemption_fee")
+                                .unwrap()
+                                .encode_input(&[Token::Uint(redemption_fee_bytes)])
+                                .unwrap(),
+                        ),
+                    },
+                }))
+                .add_attribute("action", "update_redemption_fee"))
+        }
     }
 }
 
