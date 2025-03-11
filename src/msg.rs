@@ -61,6 +61,10 @@ pub enum ExecuteMsg {
         chain_id: String,
         new_refund_wallet: String,
     },
+    UpdateRedemptionFee {
+        chain_id: String,
+        new_redemption_fee: Uint128,
+    },
 }
 
 #[cw_serde]
