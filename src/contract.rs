@@ -94,7 +94,7 @@ pub fn execute(
                 ("minimum_amount", &chain_setting.minimum_amount.to_string()),
             ]))
         }
-        ExecuteMsg::SetBrigde {
+        ExecuteMsg::SetBridge {
             chain_reference_id,
             erc20_address,
         } => {
@@ -356,7 +356,7 @@ pub fn execute(
                 burn_info
                     .timestamp
                     .plus_seconds(STATE.load(deps.storage)?.retry_delay)
-                    > env.block.time,
+                    < env.block.time,
                 "Withdraw is pending"
             );
             WITHDRAW_LIST.remove(deps.storage, nonce);
