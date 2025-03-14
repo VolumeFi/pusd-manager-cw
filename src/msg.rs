@@ -16,7 +16,7 @@ pub enum ExecuteMsg {
         chain_id: String,
         chain_setting: ChainSetting,
     },
-    SetBrigde {
+    SetBridge {
         chain_reference_id: String,
         erc20_address: String,
     },
