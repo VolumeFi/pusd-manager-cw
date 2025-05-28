@@ -5,8 +5,15 @@ use cosmwasm_std::{Addr, Binary, CustomMsg, Uint128};
 use crate::state::{BurnInfo, ChainSetting, State};
 
 #[cw_serde]
+pub struct MigrateMsg {
+    pub minter: Addr,
+}
+
+#[cw_serde]
 pub struct InstantiateMsg {
     pub retry_delay: u64,
+    pub minter: Addr,
+    pub denom: String,
 }
 
 #[cw_serde]
@@ -34,6 +41,11 @@ pub enum ExecuteMsg {
     ReWithdraw {
         nonce: u64,
     },
+
+    UnmintPusd {
+        amount: Uint128,
+    },
+
     // Burn PUSD by nonce
     BurnPusd {
         nonce: u64,
@@ -73,13 +85,11 @@ pub enum PalomaMsg {
     SchedulerMsg {
         execute_job: ExecuteJob,
     },
-    /// Message struct for tokenfactory calls.
-    TokenFactoryMsg {
-        create_denom: Option<CreateDenomMsg>,
-        mint_tokens: Option<MintMsg>,
-    },
     SkywayMsg {
         set_erc20_to_denom: SetErc20ToDenom,
+    },
+    TokenFactoryMsg {
+        change_admin: ChangeAdminMsg,
     },
 }
 
@@ -128,6 +138,12 @@ pub struct BurnMsg {
 }
 
 #[cw_serde]
+pub struct ChangeAdminMsg {
+    pub denom: String,
+    pub new_admin_address: String,
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(State)]
@@ -147,6 +163,9 @@ pub enum QueryMsg {
 
     #[returns(bool)]
     ReWithdrawable {},
+
+    #[returns(BalanceResponse)]
+    PusdBalance {},
 }
 
 #[cw_serde]
@@ -161,6 +180,11 @@ pub struct SetErc20ToDenom {
     pub erc20_address: String,
     pub token_denom: String,
     pub chain_reference_id: String,
+}
+
+#[cw_serde]
+pub struct BalanceResponse {
+    pub balance: Uint128,
 }
 
 impl CustomMsg for PalomaMsg {}
