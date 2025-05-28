@@ -8,6 +8,7 @@ use cw_storage_plus::{Item, Map};
 pub struct State {
     pub retry_delay: u64,
     pub owner: Addr,
+    pub minter: Addr,
     pub denom: String,
     pub last_nonce: u64,
 }

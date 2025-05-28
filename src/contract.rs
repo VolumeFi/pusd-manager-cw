@@ -3,68 +3,89 @@ use std::collections::BTreeMap;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Env,
+    to_json_binary, Addr, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, Order, Response, StdResult, Uint128,
 };
+use cw2::set_contract_version;
 use ethabi::{Address, Contract, Function, Param, ParamType, StateMutability, Token, Uint};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
+use crate::error::ContractError::MigrationFailed;
 use crate::msg::{
-    ChainSettingInfo, CreateDenomMsg, DenomUnit, ExecuteJob, ExecuteMsg, InstantiateMsg, Metadata,
-    MintMsg, PalomaMsg, QueryMsg, SetErc20ToDenom,
+    BalanceResponse, ChainSettingInfo, ChangeAdminMsg, ExecuteJob, ExecuteMsg, InstantiateMsg,
+    MigrateMsg, PalomaMsg, QueryMsg, SetErc20ToDenom,
 };
 use crate::state::{BurnInfo, State, CHAIN_SETTINGS, STATE, WITHDRAW_LIST};
 use std::str::FromStr;
 
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:pusd-manager-cw";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(
+    deps: DepsMut,
+    _env: Env,
+    msg: MigrateMsg,
+) -> Result<Response<PalomaMsg>, ContractError> {
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    struct OldState {
+        pub retry_delay: u64,
+        pub owner: Addr,
+        pub denom: String,
+        pub last_nonce: u64,
+    }
+
+    let Some(old_state) = deps.storage.get(b"state") else {
+        return Err(MigrationFailed {});
+    };
+    let old_state: OldState = cosmwasm_std::from_json(&old_state)?;
+    let new_state = State {
+        retry_delay: old_state.retry_delay,
+        owner: old_state.owner,
+        minter: msg.minter.clone(),
+        denom: old_state.denom,
+        last_nonce: old_state.last_nonce,
+    };
+
+    let new_data = cosmwasm_std::to_json_vec(&new_state)?;
+    deps.storage.set(b"state", &new_data);
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::new()
+        .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
+            change_admin: ChangeAdminMsg {
+                denom: new_state.denom.clone(),
+                new_admin_address: msg.minter.to_string(),
+            },
+        }))
+        .add_attribute("action", "migrate")
+        .add_attribute("version", CONTRACT_VERSION))
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response<PalomaMsg>, ContractError> {
     assert!(!info.funds.is_empty(), "Insufficient funds");
-    let subdenom = "upusd";
-    let creator = env.contract.address.to_string();
-    let denom = "factory/".to_string() + creator.as_str() + "/" + subdenom;
     let state = State {
         retry_delay: msg.retry_delay,
         owner: info.sender.clone(),
-        denom: denom.clone(),
+        minter: msg.minter,
+        denom: msg.denom,
         last_nonce: 0,
     };
     STATE.save(deps.storage, &state)?;
-    let metadata: Metadata = Metadata {
-        description: "Paloma USD stablecoin".to_string(),
-        denom_units: vec![
-            DenomUnit {
-                denom: denom.clone(),
-                exponent: 0,
-                aliases: vec![],
-            },
-            DenomUnit {
-                denom: "pusd".to_string(),
-                exponent: 6,
-                aliases: vec![],
-            },
-        ],
-        name: "Paloma USD".to_string(),
-        symbol: "PUSD".to_string(),
-        base: denom.clone(),
-        display: "pusd".to_string(),
-    };
     Ok(Response::new()
-        .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-            create_denom: Some(CreateDenomMsg {
-                subdenom: subdenom.to_string(),
-                metadata,
-            }),
-            mint_tokens: None,
-        }))
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
         .add_attribute("action", "create_pusd")
-        .add_attribute("denom", denom))
+        .add_attribute("denom", &state.denom))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -123,13 +144,12 @@ pub fn execute(
             assert!(!amount.is_zero(), "Amount must be greater than 0");
 
             Ok(Response::new()
-                .add_message(CosmosMsg::Custom(PalomaMsg::TokenFactoryMsg {
-                    create_denom: None,
-                    mint_tokens: Some(MintMsg {
+                .add_message(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: recipient.to_string(),
+                    amount: vec![Coin {
                         denom: STATE.load(deps.storage)?.denom,
                         amount,
-                        mint_to_address: recipient.to_string(),
-                    }),
+                    }],
                 }))
                 .add_attributes(vec![
                     ("action", "mint_pusd"),
@@ -238,7 +258,6 @@ pub fn execute(
         }
         ExecuteMsg::BurnPusd { nonce } => {
             // ACTION: Implement BurnPusd
-            let burn_info = WITHDRAW_LIST.load(deps.storage, nonce)?;
             assert!(
                 STATE.load(deps.storage)?.owner == info.sender,
                 "Unauthorized"
@@ -247,12 +266,6 @@ pub fn execute(
             WITHDRAW_LIST.remove(deps.storage, nonce);
 
             Ok(Response::new()
-                .add_message(CosmosMsg::Bank(BankMsg::Burn {
-                    amount: vec![Coin {
-                        denom: STATE.load(deps.storage)?.denom,
-                        amount: Uint128::from(burn_info.amount),
-                    }],
-                }))
                 .add_attributes(vec![("action", "burn_pusd"), ("nonce", &nonce.to_string())]))
         }
         ExecuteMsg::ReWithdraw { nonce } => {
@@ -345,6 +358,27 @@ pub fn execute(
                     ("chain_id", &burn_info.chain_id),
                     ("recipient", burn_info.recipient.as_str()),
                     ("nonce", &nonce.to_string()),
+                ]))
+        }
+        ExecuteMsg::UnmintPusd { amount } => {
+            // ACTION: Implement UnmintPusd
+            assert!(
+                info.sender == STATE.load(deps.storage)?.minter,
+                "Unauthorized"
+            );
+            assert!(!amount.is_zero(), "Amount must be greater than 0");
+            Ok(Response::new()
+                .add_message(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: info.sender.to_string(),
+                    amount: vec![Coin {
+                        denom: STATE.load(deps.storage)?.denom,
+                        amount,
+                    }],
+                }))
+                .add_attributes(vec![
+                    ("action", "unmint_pusd"),
+                    ("minter", info.sender.as_str()),
+                    ("amount", &amount.to_string()),
                 ]))
         }
         ExecuteMsg::CancelWithdraw { nonce } => {
@@ -591,7 +625,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetState {} => to_json_binary(&STATE.load(deps.storage)?),
         QueryMsg::GetWithdrawList {} => {
@@ -624,5 +658,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&CHAIN_SETTINGS.load(deps.storage, chain_id)?)
         }
         QueryMsg::ReWithdrawable {} => to_json_binary(&!WITHDRAW_LIST.is_empty(deps.storage)),
+        QueryMsg::PusdBalance {} => to_json_binary(&BalanceResponse {
+            balance: deps
+                .querier
+                .query_balance(
+                    env.contract.address,
+                    STATE.load(deps.storage)?.denom.clone(),
+                )?
+                .amount,
+        }),
     }
 }
